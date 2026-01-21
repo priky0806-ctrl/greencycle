@@ -1,0 +1,125 @@
+
+import React, { useState, useEffect } from 'react';
+import { User } from './types';
+import Login from './components/Login';
+import Dashboard from './components/Dashboard';
+import Locations from './components/Locations';
+import Rewards from './components/Rewards';
+import CameraScanner from './components/CameraScanner';
+import History from './components/History';
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'scan' | 'rewards' | 'history'>('home');
+
+  // Check for stored user session
+  useEffect(() => {
+    const savedUser = localStorage.getItem('greencycle_user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleLogin = (name: string, email: string) => {
+    const newUser = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      email,
+      points: 250, // Starting bonus
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff`
+    };
+    setUser(newUser);
+    localStorage.setItem('greencycle_user', JSON.stringify(newUser));
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('greencycle_user');
+  };
+
+  const updatePoints = (pointsToAdd: number) => {
+    if (!user) return;
+    const updatedUser = { ...user, points: user.points + pointsToAdd };
+    setUser(updatedUser);
+    localStorage.setItem('greencycle_user', JSON.stringify(updatedUser));
+  };
+
+  if (!user) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+      {/* Header */}
+      <header className="bg-emerald-600 text-white p-4 shadow-md flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-2">
+          <i className="fa-solid fa-leaf text-2xl"></i>
+          <h1 className="font-bold text-xl">GreenCycle</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="bg-emerald-700 px-3 py-1 rounded-full flex items-center gap-1">
+            <i className="fa-solid fa-star text-yellow-400"></i>
+            <span className="font-semibold text-sm">{user.points}</span>
+          </div>
+          <button onClick={handleLogout} className="text-emerald-100 hover:text-white">
+            <i className="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto pb-20">
+        {activeTab === 'home' && <Dashboard user={user} />}
+        {activeTab === 'map' && <Locations onPointsEarned={updatePoints} />}
+        {activeTab === 'scan' && <CameraScanner onPointsEarned={updatePoints} />}
+        {activeTab === 'rewards' && <Rewards userPoints={user.points} onRedeem={(cost) => updatePoints(-cost)} />}
+        {activeTab === 'history' && <History user={user} />}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center p-2 z-50">
+        <NavItem 
+          icon="fa-house" 
+          label="หน้าแรก" 
+          isActive={activeTab === 'home'} 
+          onClick={() => setActiveTab('home')} 
+        />
+        <NavItem 
+          icon="fa-map-location-dot" 
+          label="จุดรับขยะ" 
+          isActive={activeTab === 'map'} 
+          onClick={() => setActiveTab('map')} 
+        />
+        <div className="relative -top-6">
+          <button 
+            onClick={() => setActiveTab('scan')}
+            className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all active:scale-95 ${activeTab === 'scan' ? 'bg-emerald-700' : 'bg-emerald-500'}`}
+          >
+            <i className="fa-solid fa-camera text-2xl"></i>
+          </button>
+        </div>
+        <NavItem 
+          icon="fa-gift" 
+          label="แลกของ" 
+          isActive={activeTab === 'rewards'} 
+          onClick={() => setActiveTab('rewards')} 
+        />
+        <NavItem 
+          icon="fa-chart-line" 
+          label="ประวัติ" 
+          isActive={activeTab === 'history'} 
+          onClick={() => setActiveTab('history')} 
+        />
+      </nav>
+    </div>
+  );
+};
+
+const NavItem: React.FC<{ icon: string; label: string; isActive: boolean; onClick: () => void }> = ({ icon, label, isActive, onClick }) => (
+  <button onClick={onClick} className="flex flex-col items-center gap-1 w-16">
+    <i className={`fa-solid ${icon} text-lg ${isActive ? 'text-emerald-600' : 'text-gray-400'}`}></i>
+    <span className={`text-[10px] font-medium ${isActive ? 'text-emerald-600' : 'text-gray-400'}`}>{label}</span>
+  </button>
+);
+
+export default App;
